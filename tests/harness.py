@@ -173,6 +173,21 @@ class Session(object):
 			f()
 		return scr
 
+	def instantiateDialog(self, cls, *args, **kwargs):
+		dlg = cls(self, *args, **kwargs)
+		check_skin(dlg)
+		dlg.shown = False
+		for f in list(dlg.onLayoutFinish):
+			f()
+		self.dialogs = getattr(self, "dialogs", [])
+		self.dialogs.append(dlg)
+		return dlg
+
+	def deleteDialog(self, dlg):
+		self.dialogs.remove(dlg)
+		for f in list(dlg.onClose):
+			f()
+
 	def close(self, scr, *ret):
 		assert scr in self.stack, "closing screen not on stack: %s" % scr
 		assert self.stack[-1] is scr, "closing %s but top is %s" % (scr.__class__.__name__, self.stack[-1].__class__.__name__)
@@ -211,6 +226,8 @@ def press(scr, action):
 	for m in maps:
 		if action in m.actions:
 			res = m.actions[action]()
+			if type(res) is int and res == 0:
+				continue  # not handled -> next action map (like eActionMap)
 			return res
 	raise AssertionError("action %s not handled by %s" % (action, scr.__class__.__name__))
 

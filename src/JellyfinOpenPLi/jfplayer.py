@@ -3,15 +3,17 @@
 # Jellyfin for Enigma2 - playback (MoviePlayer subclass with resume, reporting, autoplay)
 from __future__ import absolute_import
 
-from .jfi18n import _
+from .jfi18n import _, N_
 
 from enigma import eServiceReference, eTimer, iPlayableService
 
 from Components.ActionMap import ActionMap
+from Components.Label import Label
 from Components.ServiceEventTracker import ServiceEventTracker
 from Screens.ChoiceBox import ChoiceBox
 from Screens.InfoBar import MoviePlayer
 from Screens.MessageBox import MessageBox
+from Screens.Screen import Screen
 
 from . import jfconfig
 from .jfapi import make_play_report
@@ -21,7 +23,12 @@ from .jfutil import (clean_text, display_title, episode_code, fmt_clock, is_play
 from .jflog import log
 
 PTS_PER_SECOND = 90000
+TICKS_PER_SECOND = 10000000
 REPORT_INTERVAL_MS = 10000
+COUNTDOWN_S = 10
+# media segments the overlay offers to skip, with the button text
+SKIP_LABELS = {"Intro": N_("Intro überspringen"), "Recap": N_("Rückblick überspringen"), "Preview": N_("Vorschau überspringen"),
+	"Commercial": N_("Werbung überspringen")}
 
 
 def pts_to_ticks(pts):
@@ -147,6 +154,20 @@ def start_playback(screen, queue, idx, start_ticks=0, on_finished=None, audio_in
 
 
 # ------------------------------------------------------------------------------------------
+# overlay
+# ------------------------------------------------------------------------------------------
+class PlayerOsd(Screen):
+	"""Shown above the video without taking the keys (the player handles OK/EXIT while it is visible)."""
+
+	def __init__(self, session):
+		from .jfskin import osd_skin
+		Screen.__init__(self, session)
+		self.skin = osd_skin()
+		self["osd_title"] = Label("")
+		self["osd_sub"] = Label("")
+
+
+# ------------------------------------------------------------------------------------------
 # the player
 # ------------------------------------------------------------------------------------------
 class JellyfinPlayer(MoviePlayer):
@@ -173,6 +194,13 @@ class JellyfinPlayer(MoviePlayer):
 		self.bg = _bg_group()
 		self.autoplay = jfconfig.get_bool("autoplay_next")
 		self.seek_skip = jfconfig.get("seek_mode") == "skip"
+		self.skip_mode = jfconfig.get("skip_segments")  # ask / auto / off
+		self.segments = []
+		self.segments_done = set()  # skipped or dismissed (type, start)
+		self.osd_kind = None  # None / "skip" / "next"
+		self.osd_segment = None
+		self.countdown = None
+		self.countdown_cancelled = False
 		self.queue_extended = False
 		ref = make_ref(stream["url"], self.title_for(self.current_item()))
 		MoviePlayer.__init__(self, session, ref)
@@ -184,6 +212,11 @@ class JellyfinPlayer(MoviePlayer):
 		self.resume_timer.callback.append(self.try_resume)
 		self.track_timer = eTimer()
 		self.track_timer.callback.append(self.try_select_tracks)
+		self.osd_timer = eTimer()
+		self.osd_timer.callback.append(self.check_osd)
+		self.osd = session.instantiateDialog(PlayerOsd)
+		# before the infobar's own OK/EXIT; returns 0 (not handled) while no overlay is shown
+		self["JellyfinOsdActions"] = ActionMap(["OkCancelActions"], {"ok": self.osd_ok, "cancel": self.osd_cancel}, -3)
 		self["JellyfinActions"] = ActionMap(["MoviePlayerActions", "InfobarEPGActions"], {
 			"movePrev": self.play_previous,
 			"moveNext": self.play_next_key,
@@ -258,6 +291,7 @@ class JellyfinPlayer(MoviePlayer):
 			self.stopped_reported = False
 			self.bg.run(self.cl.report_start, self.report_body(), pool="bg")
 			self.report_timer.start(REPORT_INTERVAL_MS, False)
+			self.load_segments()
 		if self.start_ticks > 0:
 			if self.stream.get("play_method") == "Transcode" and not self.stream.get("is_hls"):
 				# progressive transcode already starts at StartTimeTicks
@@ -365,6 +399,8 @@ class JellyfinPlayer(MoviePlayer):
 		self.report_timer.stop()
 		self.resume_timer.stop()
 		self.track_timer.stop()
+		self.osd_timer.stop()
+		self.hide_osd()
 		self.report_stopped()
 		self.switching = True
 		item = self.queue[idx]
@@ -417,7 +453,7 @@ class JellyfinPlayer(MoviePlayer):
 		if self.jf_closing or self.switching:
 			return
 		self.report_stopped(finished=True)
-		if self.autoplay and self.has_next():
+		if self.autoplay and self.has_next() and not self.countdown_cancelled:
 			self.play_index(self.index + 1)
 		else:
 			self.stop_and_close()
@@ -442,8 +478,12 @@ class JellyfinPlayer(MoviePlayer):
 
 	def on_player_close(self):
 		self.jf_closing = True
-		for t in (self.report_timer, self.resume_timer, self.track_timer):
+		for t in (self.report_timer, self.resume_timer, self.track_timer, self.osd_timer):
 			t.stop()
+		if self.osd is not None:
+			self.osd.hide()
+			self.session.deleteDialog(self.osd)
+			self.osd = None
 		self.report_stopped()
 		self.tasks.cancel()
 
@@ -467,6 +507,148 @@ class JellyfinPlayer(MoviePlayer):
 			self.doSeekRelative(30 * PTS_PER_SECOND)
 		else:
 			MoviePlayer.right(self)
+
+	# ------------------------------------------------------------- intro skip + next episode countdown
+	def load_segments(self):
+		self.segments = []
+		self.segments_done = set()
+		self.countdown = None
+		self.countdown_cancelled = False
+		self.hide_osd()
+		item = self.current_item()
+		if item.get("MediaType") == "Audio" or item.get("Type") in ("Audio", "MusicVideo"):
+			return
+		self.osd_timer.start(1000, False)
+		if self.skip_mode == "off" and not (self.autoplay and self.has_next()):
+			return
+		item_id = item["Id"]
+
+		def ok(segments):
+			if not self.jf_closing and self.current_item().get("Id") == item_id:
+				self.segments = segments or []
+				if self.segments:
+					log("media segments: %s" % ", ".join("%s %d-%ds" % (k, a // TICKS_PER_SECOND, b // TICKS_PER_SECOND) for k, a, b in self.segments))
+		self.tasks.run(self.cl.media_segments, item_id, item.get("Type"), callback=ok, errback=lambda e: None)
+
+	def can_seek(self):
+		if self.stream.get("play_method") == "Transcode" and not self.stream.get("is_hls"):
+			return False  # progressive transcode: no seeking
+		seek = self.getSeek()
+		try:
+			return bool(seek and seek.isCurrentlySeekable())
+		except Exception:
+			return False
+
+	def runtime_ticks(self):
+		run = int(self.current_item().get("RunTimeTicks") or 0)
+		if run:
+			return run
+		seek = self.getSeek()
+		try:
+			length = seek and seek.getLength()
+			if length and not length[0] and length[1] > 0:
+				return self.offset_ticks + pts_to_ticks(length[1])
+		except Exception:
+			pass
+		return 0
+
+	def countdown_start(self):
+		"""Where the countdown to the next title begins: start of the credits (Outro) or 10 s before the end."""
+		if not (self.autoplay and self.has_next()) or self.countdown_cancelled:
+			return None
+		run = self.runtime_ticks()
+		for kind, start, _end in self.segments:
+			if kind == "Outro" and start > run * 0.5:
+				return start
+		return run - COUNTDOWN_S * TICKS_PER_SECOND if run > 60 * TICKS_PER_SECOND else None
+
+	def active_segment(self, pos):
+		if self.skip_mode == "off":
+			return None
+		for kind, start, end in self.segments:
+			if kind in SKIP_LABELS and start <= pos < end - 2 * TICKS_PER_SECOND and (kind, start) not in self.segments_done:
+				return kind, start, end
+		return None
+
+	def check_osd(self):
+		if self.jf_closing or self.switching or not self.started or self.is_paused():
+			return
+		pos = self.current_ticks()
+		seg = self.active_segment(pos) if self.can_seek() else None
+		if seg is not None and self.skip_mode == "auto":
+			self.segments_done.add(seg[:2])
+			self.skip_to(seg[2])
+			return
+		cd = self.countdown_start()
+		if cd is not None and pos >= cd:
+			self.countdown = COUNTDOWN_S if self.countdown is None else self.countdown - 1
+			if self.countdown <= 0:
+				self.hide_osd()
+				self.osd_timer.stop()
+				self.play_index(self.index + 1)
+				return
+			nxt = self.queue[self.index + 1]
+			title = _("Nächste Folge in %d s") if nxt.get("Type") == "Episode" else _("Als Nächstes in %d s")
+			self.show_osd("next", title % self.countdown, self.title_for(nxt))
+			return
+		self.countdown = None
+		if seg is not None:
+			self.osd_segment = seg
+			self.show_osd("skip", _(SKIP_LABELS[seg[0]]), _("EXIT blendet aus"))
+		else:
+			self.hide_osd()
+
+	def skip_to(self, ticks):
+		seek = self.getSeek()
+		if seek is None:
+			return
+		log("skip to %ss" % (ticks // TICKS_PER_SECOND))
+		try:
+			seek.seekTo(ticks_to_pts(max(0, ticks - self.offset_ticks)))
+			self.last_ticks = ticks
+		except Exception as e:
+			log("skip failed: %s" % e)
+
+	def show_osd(self, kind, title, sub):
+		self.osd_kind = kind
+		if self.osd is None:
+			return
+		self.osd["osd_title"].setText(title)
+		self.osd["osd_sub"].setText(sub)
+		if not self.osd.shown:
+			self.osd.show()
+
+	def hide_osd(self):
+		self.osd_kind = None
+		self.osd_segment = None
+		if self.osd is not None and self.osd.shown:
+			self.osd.hide()
+
+	def osd_ok(self):
+		if self.osd_kind == "skip" and self.osd_segment:
+			kind, start, end = self.osd_segment
+			self.segments_done.add((kind, start))
+			self.hide_osd()
+			self.skip_to(end)
+			return None
+		if self.osd_kind == "next":
+			self.hide_osd()
+			self.osd_timer.stop()
+			self.play_index(self.index + 1)
+			return None
+		return 0  # not ours: the infobar shows/hides
+
+	def osd_cancel(self):
+		if self.osd_kind == "skip" and self.osd_segment:
+			self.segments_done.add(self.osd_segment[:2])
+			self.hide_osd()
+			return None
+		if self.osd_kind == "next":
+			self.countdown_cancelled = True  # stay until the end, then leave instead of playing on
+			self.countdown = None
+			self.hide_osd()
+			return None
+		return 0
 
 	def show_info(self):
 		item = self.current_item()

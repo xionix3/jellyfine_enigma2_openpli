@@ -4,7 +4,7 @@
 # Jellyfin for Enigma2 - settings
 from __future__ import absolute_import
 
-from .jfi18n import _, set_language
+from .jfi18n import _, N_, set_language
 
 from Components.ActionMap import ActionMap
 from Components.Label import Label
@@ -29,6 +29,27 @@ def about_text(cl=None):
 	return "\n".join(lines)
 
 
+# settings shown in groups; anything not listed lands in the last group
+GROUPS = (
+	(N_("Allgemein"), ("language", "home_layout", "backdrops", "rules_first", "show_played", "new_days", "update_check", "mainmenu", "extmenu")),
+	(N_("Wiedergabe"), ("playmode", "player", "autoplay_next", "skip_segments", "resume_ask", "seek_mode")),
+	(N_("Qualität"), ("max_bitrate", "max_width", "hevc", "dts", "truehd", "vc1", "vp9", "audio_channels", "protocol")),
+	(N_("System"), ("cache_dir", "verify_ssl")),
+)
+HEADER = "_group"
+
+
+def grouped_settings():
+	"""[(group title, [setting tuples])] in display order."""
+	by_id = dict((s[0], s) for s in jfconfig.SETTINGS)
+	listed = set(sid for _title, ids in GROUPS for sid in ids)
+	out = []
+	for title, ids in GROUPS:
+		out.append((title, [by_id[sid] for sid in ids if sid in by_id]))
+	out[-1][1].extend(s for s in jfconfig.SETTINGS if s[0] not in listed)
+	return out
+
+
 class SettingsScreen(JFScreen):
 	def __init__(self, session):
 		JFScreen.__init__(self, session)
@@ -46,12 +67,12 @@ class SettingsScreen(JFScreen):
 			"menu": self.key_menu,
 			"ok": lambda: self.change(1),
 			"cancel": self.close,
-			"up": self["list"].up,
-			"down": self["list"].down,
+			"up": lambda: self.move("up"),
+			"down": lambda: self.move("down"),
 			"left": lambda: self.change(-1),
 			"right": lambda: self.change(1),
-			"nextBouquet": self["list"].pageDown,
-			"prevBouquet": self["list"].pageUp,
+			"nextBouquet": lambda: self.move("pageDown"),
+			"prevBouquet": lambda: self.move("pageUp"),
 			"red": self.close,
 			"green": self.save,
 			"yellow": self.clear_cache,
@@ -62,16 +83,44 @@ class SettingsScreen(JFScreen):
 
 	def build(self):
 		rows = []
-		for sid, label, _choices, _default, _help in jfconfig.SETTINGS:
-			value = self.vals[sid]
-			text = jfconfig.label_for(sid, value)
-			if sid == "player" and value not in [v for v, _lbl in jfconfig.player_choices()]:
-				text = jfconfig.label_for(sid, "4097")
-			rows.append(text_row(sid, _(label), ROW_W, 62, value="<  %s  >" % text, value_width=560, value_color=C_ACCENT))
-		idx = self["list"].getSelectedIndex() if self["list"].list else 0
+		for title, settings in grouped_settings():
+			if not settings:
+				continue
+			rows.append(text_row(HEADER, _(title).upper(), ROW_W, 62, color=C_ACCENT))
+			for sid, label, _choices, _default, _help in settings:
+				value = self.vals[sid]
+				text = jfconfig.label_for(sid, value)
+				if sid == "player" and value not in [v for v, _lbl in jfconfig.player_choices()]:
+					text = jfconfig.label_for(sid, "4097")
+				rows.append(text_row(sid, "    " + _(label), ROW_W, 62, value="<  %s  >" % text, value_width=560, value_color=C_ACCENT))
+		idx = self["list"].getSelectedIndex() if self["list"].list else 1
 		self["list"].setList(rows)
 		self["list"].moveToIndex(idx)
+		self.skip_header(1)
 		self.update_description()
+
+	def move(self, how):
+		"""Up/down/page; group titles are skipped."""
+		lst = self["list"]
+		before = lst.getSelectedIndex()
+		getattr(lst, how)()
+		step = 1 if how in ("down", "pageDown") else -1
+		if lst.getSelectedIndex() == before and how in ("up", "down"):
+			return
+		self.skip_header(step)
+
+	def skip_header(self, step):
+		lst = self["list"]
+		rows = lst.list
+		i = lst.getSelectedIndex()
+		while 0 <= i < len(rows) and rows[i][0] == HEADER:
+			i += step
+		if not 0 <= i < len(rows):  # list starts/ends with a title -> go the other way
+			i = lst.getSelectedIndex()
+			while 0 <= i < len(rows) and rows[i][0] == HEADER:
+				i -= step
+		if 0 <= i < len(rows) and i != lst.getSelectedIndex():
+			lst.moveToIndex(i)
 
 	def update_description(self):
 		cur = self["list"].getCurrent()
@@ -89,7 +138,7 @@ class SettingsScreen(JFScreen):
 
 	def change(self, step):
 		cur = self["list"].getCurrent()
-		if not cur:
+		if not cur or cur[0] == HEADER:
 			return
 		sid = cur[0]
 		choices = [v for v, _lbl in jfconfig.choices_for(sid)]

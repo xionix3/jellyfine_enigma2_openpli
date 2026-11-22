@@ -52,6 +52,8 @@ SETTINGS = [
 	("protocol", N_("Transkodier-Protokoll"), [("hls", N_("HLS (empfohlen)")), ("http", N_("HTTP-Stream (TS)"))], "hls", N_("HLS erlaubt Spulen in transkodierten Streams.")),
 	("player", N_("Player"), [], "4097", N_("4097 = Enigma2 GStreamer. 5001/5002 benötigen das ServiceApp-Plugin.")),
 	("autoplay_next", N_("Nächste Episode automatisch"), [("1", N_("Ja")), ("0", N_("Nein"))], "1", N_("Spielt nach einer Episode die nächste ab.")),
+	("skip_segments", N_("Intro/Rückblick überspringen"), [("ask", N_("Knopf anzeigen (OK)")), ("auto", N_("Automatisch")), ("off", N_("Aus"))], "ask",
+		N_("Braucht Jellyfin 10.10+ mit Medien-Segmenten (z.B. Plugin Intro Skipper). Am Ende einer Folge zählt die nächste von 10 herunter (OK: sofort, EXIT: abbrechen).")),
 	("resume_ask", N_("Fortsetzen"), [("ask", N_("Nachfragen")), ("resume", N_("Immer fortsetzen")), ("start", N_("Immer von vorne"))], "ask", N_("Verhalten bei Titeln mit gespeicherter Position (PLAY-Taste im Raster).")),
 	("seek_mode", N_("Links/Rechts im Player"), [("skip", N_("Springen (-10 s / +30 s)")), ("e2", N_("Enigma2-Standard (Spulen)"))], "skip", ""),
 	("show_played", N_("Gesehen-Markierung im Raster"), [("1", N_("Ja")), ("0", N_("Nein"))], "1", ""),

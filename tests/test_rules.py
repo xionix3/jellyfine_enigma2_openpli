@@ -47,6 +47,18 @@ ranked = [i["Id"] for i in rank_search("bluey", fuzzy)]
 check(ranked == ["4", "6", "3", "5", "1", "2", "7"], "bluey ranking %s" % ranked)
 check(norm_text("Amélie: Die fabelhafte Welt!") == "amelie die fabelhafte welt" and [i["Id"] for i in rank_search("amelie", [{"Id": "a", "Name": "x"}, {"Id": "b", "Name": "Amélie"}])] == ["b", "a"],
     "accents ignored")
+# picture downloads: what is on screen first (newest first), prefetch after it and at most 1-2 at a time
+from JellyfinOpenPLi.jfasync import PriorityStack, _Task
+pq = PriorityStack(background_limit=1)
+_mk = lambda name, urgent: _Task(name, (), {}, None, None, None, urgent)  # noqa: E731
+b1, b2, u1, u2 = _mk("b1", False), _mk("b2", False), _mk("u1", True), _mk("u2", True)
+for _t in (b1, b2, u1, u2):
+    pq.put(_t)
+check([pq.get().fn for _i in range(3)] == ["u2", "u1", "b1"], "visible pictures before prefetch")
+check(pq.background_running == 1 and pq.promote(b2) and pq.get() is b2 and b2.urgent, "prefetch that became visible jumps the limit")
+pq.finished(b1)
+check(pq.background_running == 0 and not pq.promote(b1), "prefetch slot released")
+
 # translations: .po reader (continuation lines, escapes, plurals, fuzzy entries), language choice
 from JellyfinOpenPLi import jfi18n
 po = """msgid ""

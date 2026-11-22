@@ -5,7 +5,7 @@
 # can be read completely, the cast (with photos) only appears when it is selected (down key or "Besetzung")
 from __future__ import absolute_import
 
-from .jfi18n import _, N_, badge
+from .jfi18n import _, N_, badge, ngettext
 
 from Components.ActionMap import ActionMap
 from Components.Label import Label
@@ -14,11 +14,13 @@ from Components.ProgressBar import ProgressBar
 from Components.ScrollLabel import ScrollLabel
 from Screens.ChoiceBox import ChoiceBox
 
-from .jfcommon import SEP, JFScreen, hero_meta, move_widget, set_text_color, set_widget_pixmap
+from . import jfconfig
+from .jfcommon import SEP, JFScreen, move_widget, set_text_color, set_widget_pixmap
 from .jfimages import image_ref
-from .jfskin import (C_DARK, C_TEXT, CAST_COUNT, CAST_H, CAST_STEP, CAST_W, CAST_X0, CAST_Y, FRAME_PAD, PILL_COUNT, S, detail_skin, img)
-from .jfutil import (clean_text, episode_code, fmt_ends_at, is_favorite, is_played, lang_name, played_percentage, resume_ticks,
-	stream_label, video_label)
+from .jfskin import (C_DARK, C_TEXT, CAST_COUNT, CAST_H, CAST_STEP, CAST_W, CAST_X0, CAST_Y, DETAIL_COL, DETAIL_LINES_Y, DETAIL_POSTER,
+	DETAIL_TEXT_Y, FRAME_PAD, PILL_COUNT, S, detail_skin, img)
+from .jfutil import (child_count_text, clean_text, episode_code, fmt_clock, fmt_ends_at, fmt_rating, fmt_runtime, is_favorite, is_new,
+	is_played, lang_name, played_percentage, resume_ticks, stream_label, subtitle_line, ticks_to_seconds, video_label)
 
 PLAYABLE = ("Movie", "Episode", "Video", "MusicVideo", "Trailer", "Recording", "Program", "TvChannel")
 ROLES = {"Actor": N_("Darsteller"), "Director": N_("Regie"), "Writer": N_("Drehbuch"), "Producer": N_("Produktion"), "GuestStar": N_("Gaststar"),
@@ -60,6 +62,45 @@ def person_item(p):
 	return it
 
 
+def detail_lines(it):
+	"""(facts, state, is_new): what the title is - and where the user stands with it."""
+	t = it.get("Type")
+	facts = []
+	if t == "Episode":
+		facts.append(episode_code(it))
+	elif t == "Series":
+		facts.append(subtitle_line(it))
+	elif it.get("ProductionYear"):
+		facts.append(str(it["ProductionYear"]))
+	if t in PLAYABLE:
+		facts.append(fmt_runtime(it.get("RunTimeTicks")))
+	elif it.get("ChildCount") and t in ("Series", "Season", "BoxSet", "MusicAlbum", "Folder"):
+		facts.append(child_count_text(t, it["ChildCount"]))
+	facts.append(it.get("OfficialRating") or "")
+	rating = fmt_rating(it.get("CommunityRating"))
+	if rating:
+		facts.append("\u2605 %s" % rating)
+	if it.get("CriticRating"):
+		facts.append(_("Kritiker %s%%") % it["CriticRating"])
+	state = []
+	fresh = it.get("_jf_new_count")
+	if fresh:
+		state.append(ngettext("%d neue Folge", "%d neue Folgen", fresh) % fresh)
+	if t == "Series":
+		state.append({"Continuing": _("laufend"), "Ended": _("beendet")}.get(it.get("Status"), ""))
+	pos = resume_ticks(it)
+	if is_played(it) and t not in ("Series", "Season", "BoxSet"):
+		state.append(_("gesehen"))
+	elif pos:
+		state.append(_("fortsetzen bei %s") % fmt_clock(ticks_to_seconds(pos)))
+	if t in PLAYABLE and it.get("RunTimeTicks"):
+		state.append(fmt_ends_at(it["RunTimeTicks"], pos if not is_played(it) else 0) or "")
+	if is_favorite(it):
+		state.append(_("Favorit"))
+	new = bool(fresh) or is_new(it, jfconfig.get_int("new_days", 7))
+	return SEP.join(f for f in facts if f), SEP.join(s for s in state if s), new
+
+
 class DetailScreen(JFScreen):
 	def __init__(self, session, item):
 		JFScreen.__init__(self, session)
@@ -78,12 +119,13 @@ class DetailScreen(JFScreen):
 		self.focus = "pills"
 		self.loaded = False
 		self["backdrop"] = Pixmap()
+		self["poster"] = Pixmap()
 		self["overlay"] = Pixmap()
 		self.static_layers["overlay"] = "detail_overlay.png"
 		self["badge"] = Pixmap()
 		self["cast_frame"] = Pixmap()
 		self["progress"] = ProgressBar()
-		for name in ("crumb", "title", "meta", "genres", "tech", "cast_title", "cast_hint", "status"):
+		for name in ("crumb", "title", "meta", "genres", "state", "tech", "cast_title", "cast_hint", "status"):
 			self[name] = Label("")
 		self["title"].setText(item.get("Name", ""))
 		self["overview"] = ScrollLabel("")
@@ -202,25 +244,28 @@ class DetailScreen(JFScreen):
 		self["status"].setText("")
 		self["crumb"].setText(self.crumb_text())
 		self["title"].setText(it.get("Name") or "")
-		meta, new = hero_meta(it)
-		extra = []
-		if t == "Series":
-			extra.append({"Continuing": _("laufend"), "Ended": _("beendet")}.get(it.get("Status"), ""))
-		if it.get("CriticRating"):
-			extra.append(_("Kritiker %s%%") % it["CriticRating"])
-		if t in PLAYABLE and it.get("RunTimeTicks"):
-			extra.append(fmt_ends_at(it["RunTimeTicks"], resume_ticks(it) if not is_played(it) else 0) or "")
-		if is_favorite(it):
-			extra.append(_("Favorit"))
-		meta = SEP.join([m for m in [meta] + extra if m])
-		self["meta"].setText(meta)
+		facts, state, new = detail_lines(it)
+		# poster left; without one the text starts at the left edge
+		col = DETAIL_COL if image_ref(it, "poster") else 120
+		if col != getattr(self, "text_col", None):
+			self.text_col = col
+			move_widget(self, "genres", col, DETAIL_LINES_Y[1])
+			move_widget(self, "state", col, DETAIL_LINES_Y[2])
+			move_widget(self, "overview", col, DETAIL_TEXT_Y)
+			move_widget(self, "badge", col, DETAIL_LINES_Y[0] + 8)
+		if col == DETAIL_COL:
+			self.load_image("poster", it, "poster", DETAIL_POSTER[2], DETAIL_POSTER[3])
+		else:
+			self["poster"].hide()
+		self["meta"].setText(facts)
 		if new:
 			self["badge"].show()
-			move_widget(self, "meta", 120 + badge("new")[1] + 12, 184)
+			move_widget(self, "meta", col + badge("new")[1] + 12, DETAIL_LINES_Y[0])
 		else:
 			self["badge"].hide()
-			move_widget(self, "meta", 120, 184)
+			move_widget(self, "meta", col, DETAIL_LINES_Y[0])
 		self["genres"].setText(", ".join(it.get("Genres") or []))
+		self["state"].setText(state)
 		overview = clean_text(it.get("Overview"))
 		if it.get("Taglines") and t != "Episode":
 			overview = ("%s\n\n%s" % (it["Taglines"][0], overview)).strip()

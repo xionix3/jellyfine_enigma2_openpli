@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0] - 2026-11-22
+
+- **Faster pictures**: what is on screen is downloaded before any prefetch (prefetch uses at most 2 of now 6 download threads, 3 decoders), the pictures of a screen appear together instead of one by one, and the backdrop of a newly opened screen loads at once instead of after a pause. With 300 ms per picture from the server, the start screen is complete after 0.4 s instead of 1.8 s
+- **Skip intro**: during an intro, recap, preview or commercial an overlay offers "Skip intro" - OK jumps to its end, EXIT hides it; or skip automatically (setting *Skip intro/recap*). Uses Jellyfin 10.10+ media segments, on older servers the Intro Skipper plugin endpoint
+- **Next episode countdown**: in the credits (Outro segment, otherwise the last 10 s) the next episode counts down from 10 - OK plays it now, EXIT cancels and the player closes at the end instead of playing on
+- **Details page**: poster on the left, the facts (year, runtime, age rating, ★ rating, critics) and the personal state (resume position, ends at, watched, favourite) on separate lines instead of one overflowing line
+- **Settings in groups**: General, Playback, Quality, System
+
 ## [1.4.0] - 2026-11-20
 
 - **English and Dutch**: the whole interface (screens, menus, messages, settings, badges, plugin description) is translated. The new setting *Sprache / Language / Taal* (first in the settings) follows the menu language of the box by default - German, English or Dutch, English for every other language - or is set by hand; the change applies at once

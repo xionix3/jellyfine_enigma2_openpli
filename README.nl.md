@@ -70,15 +70,17 @@
 - **Glas-look**: afgeronde, doorschijnende vlakken, kaders en knoppen (als PNG, zodat Enigma2 ze echt laat overvloeien)
 - **Mijn lijsten**: eigen filterregels, bv. *nieuwe films van de laatste 30 dagen* of *nieuwe afleveringen van de series die ik kijk*
 - **Posteroverzicht** met sorteren, filters (niet bekeken, bekeken, favorieten, begonnen, genre, **categorie**), NIEUW-label, voortgangsbalken en achtergrondafbeelding
-- **Details**: het beeld blijft zichtbaar, de volledige beschrijving is leesbaar; actieknoppen, audio- en ondertitelkeuze, versies, vergelijkbare titels; de **cast met foto's** verschijnt met ▼ (OK toont de titels van de persoon)
+- **Details**: poster links, duidelijke inforegels (feiten met ★-waardering, voortgang), de achtergrond blijft zichtbaar, de volledige beschrijving is leesbaar; actieknoppen, audio- en ondertitelkeuze, versies, vergelijkbare titels; de **cast met foto's** verschijnt met ▼ (OK toont de titels van de persoon)
 - **Zoeken**: alleen titels die de zoekterm echt bevatten – elke categorie wordt apart gezocht en als eigen rij getoond (films, series, afleveringen, collecties, muziek, personen)
 - **Seizoenen & afleveringen**, **muziekalbums**
 - **Nederlands, Engels, Duits**: volgt de menutaal van de box of wordt handmatig gekozen (*Instellingen → Taal*)
 - **Automatische updates**: controleert bij het starten (hoogstens twee keer per dag) de GitHub-releases, installeert op verzoek de nieuwe versie (met controlesom) en herstart Enigma2
 - **Afspelen** via de Enigma2-moviespeler (GStreamer of ServiceApp):
   direct in originele kwaliteit (4K/HEVC op UHD-boxen) of omgezet door de server (HLS), bv. bij DTS-geluid of beeldondertitels
-- Voortgang en bekeken-status worden aan de server gemeld, **de volgende aflevering start automatisch**
-- HD- en Full-HD-skins, hergebruik van verbindingen, vooraf laden, afbeeldingscache optioneel op HDD/USB
+- **Intro overslaan**: tijdens een intro, terugblik of voorvertoning verschijnt „Intro overslaan“ – OK springt naar het einde (of automatisch). Vereist Jellyfin 10.10+ met mediasegmenten, bv. van de plugin *Intro Skipper*; oudere servers met Intro Skipper werken ook
+- **Volgende aflevering**: tijdens de aftiteling telt de volgende aflevering af vanaf 10 – OK speelt meteen, EXIT blijft bij de aftiteling
+- Voortgang en bekeken-status worden aan de server gemeld
+- **Snel**: zichtbare afbeeldingen worden vóór al het andere geladen en verschijnen samen in plaats van één voor één; HD- en Full-HD-skins, hergebruik van verbindingen, vooraf laden, afbeeldingscache optioneel op HDD/USB
 
 ## 📦 Installatie
 
@@ -146,6 +148,7 @@ Eigen lijsten verschijnen als onderdelen bovenaan het startscherm. Per lijst in 
 | HEVC / DTS / TrueHD / VC-1 / VP9 | wat de box direct mag afspelen (DTS/TrueHD standaard → AC3) |
 | Speler | GStreamer (4097) of – indien geïnstalleerd – ServiceApp exteplayer3/gstplayer |
 | Volgende aflevering automatisch, verder kijken | gedrag bij series en opgeslagen positie |
+| Intro/terugblik overslaan | knop tonen (OK) · automatisch · uit |
 | Startscherm | modern (achtergrond + rijen met kaarten) of klassiek (menu links, posters rechts) |
 | NIEUW-label, achtergronden | uiterlijk |
 | Eigen lijsten op het startscherm | bovenaan · na "verder kijken" · onderaan |

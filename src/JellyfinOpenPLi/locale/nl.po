@@ -111,7 +111,7 @@ msgstr ""
 "\n"
 "Meld je opnieuw aan in het hoofdmenu van de plugin (rode knop)."
 
-#: jfcommon.py jfgrid.py
+#: jfcommon.py jfdetail.py jfgrid.py
 msgid "%d neue Folge"
 msgid_plural "%d neue Folgen"
 msgstr[0] "%d nieuwe aflevering"
@@ -121,11 +121,11 @@ msgstr[1] "%d nieuwe afleveringen"
 msgid "Bewertung %s"
 msgstr "Waardering %s"
 
-#: jfcommon.py jfepisodes.py jfgrid.py
+#: jfcommon.py jfdetail.py jfepisodes.py jfgrid.py
 msgid "fortsetzen bei %s"
 msgstr "hervatten bij %s"
 
-#: jfcommon.py jfepisodes.py jfgrid.py
+#: jfcommon.py jfdetail.py jfepisodes.py jfgrid.py
 msgid "gesehen"
 msgstr "bekeken"
 
@@ -282,6 +282,26 @@ msgid "Spielt nach einer Episode die nächste ab."
 msgstr "Speelt na een aflevering de volgende af."
 
 #: jfconfig.py
+msgid "Intro/Rückblick überspringen"
+msgstr "Intro/terugblik overslaan"
+
+#: jfconfig.py
+msgid "Knopf anzeigen (OK)"
+msgstr "Knop tonen (OK)"
+
+#: jfconfig.py
+msgid "Automatisch"
+msgstr "Automatisch"
+
+#: jfconfig.py jfdetail.py
+msgid "Aus"
+msgstr "Uit"
+
+#: jfconfig.py
+msgid "Braucht Jellyfin 10.10+ mit Medien-Segmenten (z.B. Plugin Intro Skipper). Am Ende einer Folge zählt die nächste von 10 herunter (OK: sofort, EXIT: abbrechen)."
+msgstr "Vereist Jellyfin 10.10+ met mediasegmenten (bijv. de plugin Intro Skipper). Aan het eind van een aflevering telt de volgende af vanaf 10 (OK: meteen, EXIT: annuleren)."
+
+#: jfconfig.py
 msgid "Verhalten bei Titeln mit gespeicherter Position (PLAY-Taste im Raster)."
 msgstr "Gedrag bij titels met een opgeslagen positie (PLAY-knop in het raster)."
 
@@ -332,10 +352,6 @@ msgstr "14 dagen"
 #: jfconfig.py jfrules.py
 msgid "30 Tage"
 msgstr "30 dagen"
-
-#: jfconfig.py jfdetail.py
-msgid "Aus"
-msgstr "Uit"
 
 #: jfconfig.py
 msgid "Titel, die in diesem Zeitraum zum Server hinzugefügt wurden (Serien: neue Folgen), bekommen ein NEU-Schild."
@@ -513,6 +529,18 @@ msgstr "Volledige cast"
 msgid "Mehr ..."
 msgstr "Meer ..."
 
+#: jfdetail.py
+msgid "Kritiker %s%%"
+msgstr "Critici %s%%"
+
+#: jfdetail.py
+msgid "laufend"
+msgstr "lopend"
+
+#: jfdetail.py
+msgid "beendet"
+msgstr "beëindigd"
+
 #: jfdetail.py jfepisodes.py jfgrid.py
 msgid "Gesehen +/-"
 msgstr "Bekeken +/-"
@@ -532,18 +560,6 @@ msgstr "CH+/- tekst bladeren   MENU opties"
 #: jfdetail.py
 msgid "Lade Details ..."
 msgstr "Details laden ..."
-
-#: jfdetail.py
-msgid "laufend"
-msgstr "lopend"
-
-#: jfdetail.py
-msgid "beendet"
-msgstr "beëindigd"
-
-#: jfdetail.py
-msgid "Kritiker %s%%"
-msgstr "Critici %s%%"
 
 #: jfdetail.py jfepisodes.py
 msgid "Keine Beschreibung vorhanden."
@@ -1160,6 +1176,22 @@ msgid "Jellyfin durchsuchen (Filme, Serien, Episoden, Musik, Personen)"
 msgstr "Jellyfin doorzoeken (films, series, afleveringen, muziek, personen)"
 
 #: jfplayer.py
+msgid "Intro überspringen"
+msgstr "Intro overslaan"
+
+#: jfplayer.py
+msgid "Rückblick überspringen"
+msgstr "Terugblik overslaan"
+
+#: jfplayer.py
+msgid "Vorschau überspringen"
+msgstr "Voorvertoning overslaan"
+
+#: jfplayer.py
+msgid "Werbung überspringen"
+msgstr "Reclame overslaan"
+
+#: jfplayer.py
 msgid "Nichts abspielbar gefunden"
 msgstr "Niets afspeelbaars gevonden"
 
@@ -1186,6 +1218,18 @@ msgid ""
 msgstr ""
 "De volgende titel kan niet worden afgespeeld:\n"
 "%s"
+
+#: jfplayer.py
+msgid "Nächste Folge in %d s"
+msgstr "Volgende afl. over %d s"
+
+#: jfplayer.py
+msgid "Als Nächstes in %d s"
+msgstr "Volgende over %d s"
+
+#: jfplayer.py
+msgid "EXIT blendet aus"
+msgstr "EXIT verbergt dit"
 
 #: jfplayer.py
 msgid "Video: %s"
@@ -1620,6 +1664,22 @@ msgstr "Box: %s"
 #: jfsettings.py
 msgid "Server: %s (Jellyfin %s)"
 msgstr "Server: %s (Jellyfin %s)"
+
+#: jfsettings.py
+msgid "Allgemein"
+msgstr "Algemeen"
+
+#: jfsettings.py
+msgid "Wiedergabe"
+msgstr "Afspelen"
+
+#: jfsettings.py
+msgid "Qualität"
+msgstr "Kwaliteit"
+
+#: jfsettings.py
+msgid "System"
+msgstr "Systeem"
 
 #: jfsettings.py
 msgid "Jellyfin - Einstellungen"

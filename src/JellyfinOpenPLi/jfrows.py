@@ -365,9 +365,19 @@ class RowsScreen(JFScreen):
 		self.schedule_backdrop()
 
 	# ------------------------------------------------------------- backdrop
-	def schedule_backdrop(self, delay=450):
-		if self.backdrops:
-			self.bd_timer.stop()
+	def schedule_backdrop(self, delay=300):
+		"""Backdrop of the focused title: at once when it is decoded already or nothing is shown yet (screen
+		opens -> appears together with the cards), otherwise after a short pause (no downloads while scrolling)."""
+		if not self.backdrops:
+			return
+		self.bd_timer.stop()
+		it = self.backdrop_item()
+		ref = image_ref(it, "backdrop") if it is not None else None
+		if ref is None:
+			return
+		if not getattr(self["backdrop"], "jf_shown", False) or self.images.has_pixmap(ref, S(1920), S(1080)):
+			self.load_backdrop()
+		else:
 			self.bd_timer.start(delay, True)
 
 	def backdrop_item(self):

@@ -44,6 +44,10 @@ class JFScreen(Screen):
 		self.jf_closed = False
 		self.busy = 0
 		self._jf_timers = []
+		# pictures that are still loading appear together (one repaint) instead of one after the other
+		self._reveal_waiting = 0
+		self._reveal_queue = []
+		self._reveal_timer = None
 		# full screen gradients etc.: widget name -> PNG, decoded once per session (skin pixmaps are not cached)
 		self.static_layers = {}
 		self.onClose.append(self.__jf_on_close)
@@ -72,6 +76,38 @@ class JFScreen(Screen):
 		for t in self._jf_timers:
 			t.stop()
 		self._jf_timers = []
+		if self._reveal_timer is not None:
+			self._reveal_timer.stop()
+		self._reveal_queue = []
+
+	# longest time a loaded picture waits for the others of the same screen
+	REVEAL_HOLD_MS = 300
+
+	def _reveal_expect(self):
+		self._reveal_waiting = max(0, self._reveal_waiting) + 1
+
+	def _reveal(self, fn):
+		"""A picture arrived: show it together with the others that are still loading (at most REVEAL_HOLD_MS)."""
+		self._reveal_queue.append(fn)
+		self._reveal_waiting -= 1
+		if self._reveal_waiting <= 0:
+			self._reveal_flush()
+		elif self._reveal_timer is None or not self._reveal_timer.isActive():
+			if self._reveal_timer is None:
+				from enigma import eTimer
+				self._reveal_timer = eTimer()
+				self._reveal_timer.callback.append(self._reveal_flush)
+			self._reveal_timer.start(self.REVEAL_HOLD_MS, True)
+
+	def _reveal_flush(self):
+		if self._reveal_timer is not None:
+			self._reveal_timer.stop()
+		queue, self._reveal_queue = self._reveal_queue, []
+		self._reveal_waiting = 0
+		if self.jf_closed:
+			return
+		for fn in queue:
+			fn()
 
 	def add_keys(self, red="", green="", yellow="", blue="", hint=None):
 		for name, text in (("key_red", red), ("key_green", green), ("key_yellow", yellow), ("key_blue", blue)):
@@ -193,8 +229,10 @@ class JFScreen(Screen):
 			widget.show()
 			if ph is not None:
 				ph.hide()
-		ptr = self.images.pixmap(ref, S(w), S(h), show)
+		self._reveal_expect()
+		ptr = self.images.pixmap(ref, S(w), S(h), lambda p: self._reveal(lambda: show(p)))
 		if ptr is not None:
+			self._reveal_waiting -= 1  # from the memory cache: no wait
 			show(ptr)
 			return
 		if not keep:

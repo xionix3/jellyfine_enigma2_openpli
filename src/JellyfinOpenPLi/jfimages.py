@@ -185,7 +185,7 @@ class Decoder(object):
 	ePicLoad cancels the callback of a running decode when it is started again, so every instance only
 	gets a new file once it reported back."""
 
-	def __init__(self, workers=2):
+	def __init__(self, workers=3):
 		self.idle = []
 		self.busy = {}
 		self.urgent = []  # LIFO: the picture asked for last is on screen now
@@ -295,8 +295,10 @@ class ImageLoader(object):
 				return base + ext
 		return None
 
-	def get(self, ref, w, h, callback):
-		"""callback(path or None) on the GUI thread. Returns path immediately if cached."""
+	def get(self, ref, w, h, callback, urgent=True):
+		"""callback(path or None) on the GUI thread. Returns path immediately if cached.
+
+		urgent: the picture is on screen now (downloaded before any prefetch)."""
 		if not ref:
 			return None
 		hit = self.cached(ref, w, h)
@@ -304,13 +306,16 @@ class ImageLoader(object):
 			return hit
 		base = self.path_for(ref, w, h)
 		with self.lock:
-			waiters = self.inflight.get(base)
-			if waiters is not None:
-				waiters.append(callback)
+			entry = self.inflight.get(base)
+			if entry is not None:
+				entry[0].append(callback)
+				if urgent:
+					runner().promote(entry[1])
 				return None
-			self.inflight[base] = [callback]
+			entry = self.inflight[base] = [[callback], None]
 		url = self.client.image_url(ref[0], ref[1], ref[2], max_width=w, max_height=h)
-		self.group.run(self._fetch, url, base, pool="image", callback=lambda p: self._done(base, p), errback=lambda e: self._done(base, None))
+		entry[1] = self.group.run(self._fetch, url, base, pool="image", urgent=urgent,
+			callback=lambda p: self._done(base, p), errback=lambda e: self._done(base, None))
 		return None
 
 	def _fetch(self, url, base):
@@ -336,7 +341,7 @@ class ImageLoader(object):
 
 	def _done(self, base, path):
 		with self.lock:
-			waiters = self.inflight.pop(base, [])
+			waiters = self.inflight.pop(base, [[], None])[0]
 		for cb in waiters:
 			try:
 				cb(path)
@@ -367,7 +372,7 @@ class ImageLoader(object):
 					callback(None)
 				return
 			decoder().decode(path, int(w), int(h), decoded, urgent)
-		path = self.get(ref, w, h, have_file)
+		path = self.get(ref, w, h, have_file, urgent)
 		if path:
 			have_file(path)
 		return None
@@ -382,7 +387,7 @@ class ImageLoader(object):
 		if decode:
 			self.pixmap(ref, w, h, None, urgent=False)
 		else:
-			self.get(ref, w, h, lambda path: None)
+			self.get(ref, w, h, lambda path: None, urgent=False)
 
 
 _loader = None

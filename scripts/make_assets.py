@@ -170,6 +170,27 @@ for k in ("search", "home", "movies", "tv", "lists", "settings"):
 	asset("icon_%s.png" % k, icon(k))
 asset("icon_play_dark.png", icon("play", 28, (16, 16, 22, 255)))
 asset("icon_info.png", icon("info", 28))
+# player overlay ("Intro überspringen", countdown to the next episode): dark enough to read over any picture
+
+
+def osd_panel(w, h, r=24):
+	base = rounded(w, h, r, (12, 12, 18, 222), outline=(255, 255, 255, 60), width=2)
+	bar = rounded(w, h, r, (0, 0, 0, 0))
+	d = ImageDraw.Draw(bar)
+	d.rectangle([0, 0, 8, h], fill=ACCENT + (255,))
+	mask = rounded(w, h, r, (255, 255, 255, 255)).split()[3]
+	bar.putalpha(Image.composite(bar.split()[3], Image.new("L", (w, h), 0), mask))
+	return Image.alpha_composite(base, bar)
+
+
+def keycap(text, w, h):
+	img = rounded(w, h, h // 2, (245, 245, 248, 255))
+	ImageDraw.Draw(img).text((w / 2, h / 2 + 1), text, font=font(int(h * 0.48)), fill=(16, 16, 22, 255), anchor="mm")
+	return img
+
+
+asset("osd_panel.png", osd_panel(640, 132))
+asset("key_ok.png", keycap("OK", 92, 52))
 
 # 1080p pixel exact in images/, 720p (2/3, rounded like the skin scaler) in images/hd/
 for f in os.listdir(OUT):

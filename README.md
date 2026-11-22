@@ -68,15 +68,17 @@
 - **Glas-Optik**: abgerundete, halbtransparente Flächen, Rahmen und Buttons (als PNG, damit Enigma2 sie wirklich überblendet)
 - **Meine Listen**: eigene Filterregeln, z. B. *Neue Filme der letzten 30 Tage* oder *Neue Episoden meiner Serien*
 - **Poster-Raster** mit Sortierung, Filtern (ungesehen, gesehen, Favoriten, begonnen, Genre, **Kategorie**), NEU-Schild, Fortschrittsbalken und Hintergrundbild
-- **Details**: das Bild bleibt sichtbar, die Beschreibung ist ganz lesbar; Aktions-Buttons, Audiospur- und Untertitelauswahl, Versionen, ähnliche Titel; die **Besetzung mit Fotos** erscheint mit ▼ (OK zeigt die Filme der Person)
+- **Details**: Poster links, klare Infozeilen (Fakten mit ★-Bewertung, Fortschritt), das Hintergrundbild bleibt sichtbar, die Beschreibung ist ganz lesbar; Aktions-Buttons, Audiospur- und Untertitelauswahl, Versionen, ähnliche Titel; die **Besetzung mit Fotos** erscheint mit ▼ (OK zeigt die Filme der Person)
 - **Suche**: nur Titel, die den Suchbegriff wirklich enthalten – jede Kategorie wird einzeln gesucht und als eigene Reihe gezeigt (Filme, Serien, Episoden, Sammlungen, Musik, Personen)
 - **Staffeln & Episoden**, **Musikalben**
 - **Deutsch, Englisch, Niederländisch**: richtet sich nach der Menüsprache der Box oder wird von Hand gewählt (*Einstellungen → Sprache*)
 - **Auto-Update**: prüft beim Start (höchstens zweimal täglich) die GitHub-Releases, installiert auf Wunsch die neue Version (mit Prüfsumme) und startet Enigma2 neu
 - **Wiedergabe** über den Enigma2-Movieplayer (GStreamer oder ServiceApp):
   direkt in Originalqualität (auf UHD-Boxen auch 4K/HEVC) oder vom Server umgewandelt (HLS), z. B. bei DTS-Ton oder Bild-Untertiteln
-- Fortschritt und Gesehen-Status werden an den Server gemeldet, **nächste Episode startet automatisch**
-- HD- und Full-HD-Skins, wiederverwendete Verbindungen, Vorladen, Bild-Cache optional auf HDD/USB
+- **Intro überspringen**: läuft ein Intro, Rückblick oder eine Vorschau, erscheint „Intro überspringen“ – OK springt ans Ende (oder automatisch). Braucht Jellyfin 10.10+ mit Medien-Segmenten, z. B. vom Plugin *Intro Skipper*; ältere Server mit Intro Skipper gehen auch
+- **Nächste Folge**: im Abspann zählt die nächste Episode von 10 herunter – OK spielt sofort, EXIT bleibt beim Abspann
+- Fortschritt und Gesehen-Status werden an den Server gemeldet
+- **Schnell**: sichtbare Bilder werden vor allem anderen geladen und erscheinen gemeinsam statt Stück für Stück; HD- und Full-HD-Skins, wiederverwendete Verbindungen, Vorladen, Bild-Cache optional auf HDD/USB
 
 ## 📦 Installation
 
@@ -144,6 +146,7 @@ Vorbelegt sind **Neue Filme** und **Neue Episoden meiner Serien**. **Serien mit 
 | HEVC / DTS / TrueHD / VC-1 / VP9 | was die Box direkt abspielen darf (DTS/TrueHD standardmäßig → AC3) |
 | Player | GStreamer (4097) oder – falls installiert – ServiceApp exteplayer3/gstplayer |
 | Nächste Episode automatisch, Fortsetzen | Verhalten bei Serien und gespeicherter Position |
+| Intro/Rückblick überspringen | Knopf anzeigen (OK) · automatisch · aus |
 | Startseite | Modern (Titelbild + Kartenreihen) oder Klassisch (Menü links, Poster rechts) |
 | NEU-Markierung, Hintergrundbilder | Aussehen |
 | Eigene Listen auf der Startseite | ganz oben · nach „Weiterschauen“ · unten |

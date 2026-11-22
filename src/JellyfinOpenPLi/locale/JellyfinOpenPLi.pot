@@ -108,7 +108,7 @@ msgid ""
 "Bitte im Hauptmenü des Plugins neu anmelden (rote Taste)."
 msgstr ""
 
-#: jfcommon.py jfgrid.py
+#: jfcommon.py jfdetail.py jfgrid.py
 msgid "%d neue Folge"
 msgid_plural "%d neue Folgen"
 msgstr[0] ""
@@ -118,11 +118,11 @@ msgstr[1] ""
 msgid "Bewertung %s"
 msgstr ""
 
-#: jfcommon.py jfepisodes.py jfgrid.py
+#: jfcommon.py jfdetail.py jfepisodes.py jfgrid.py
 msgid "fortsetzen bei %s"
 msgstr ""
 
-#: jfcommon.py jfepisodes.py jfgrid.py
+#: jfcommon.py jfdetail.py jfepisodes.py jfgrid.py
 msgid "gesehen"
 msgstr ""
 
@@ -279,6 +279,26 @@ msgid "Spielt nach einer Episode die nächste ab."
 msgstr ""
 
 #: jfconfig.py
+msgid "Intro/Rückblick überspringen"
+msgstr ""
+
+#: jfconfig.py
+msgid "Knopf anzeigen (OK)"
+msgstr ""
+
+#: jfconfig.py
+msgid "Automatisch"
+msgstr ""
+
+#: jfconfig.py jfdetail.py
+msgid "Aus"
+msgstr ""
+
+#: jfconfig.py
+msgid "Braucht Jellyfin 10.10+ mit Medien-Segmenten (z.B. Plugin Intro Skipper). Am Ende einer Folge zählt die nächste von 10 herunter (OK: sofort, EXIT: abbrechen)."
+msgstr ""
+
+#: jfconfig.py
 msgid "Verhalten bei Titeln mit gespeicherter Position (PLAY-Taste im Raster)."
 msgstr ""
 
@@ -328,10 +348,6 @@ msgstr ""
 
 #: jfconfig.py jfrules.py
 msgid "30 Tage"
-msgstr ""
-
-#: jfconfig.py jfdetail.py
-msgid "Aus"
 msgstr ""
 
 #: jfconfig.py
@@ -510,6 +526,18 @@ msgstr ""
 msgid "Mehr ..."
 msgstr ""
 
+#: jfdetail.py
+msgid "Kritiker %s%%"
+msgstr ""
+
+#: jfdetail.py
+msgid "laufend"
+msgstr ""
+
+#: jfdetail.py
+msgid "beendet"
+msgstr ""
+
 #: jfdetail.py jfepisodes.py jfgrid.py
 msgid "Gesehen +/-"
 msgstr ""
@@ -528,18 +556,6 @@ msgstr ""
 
 #: jfdetail.py
 msgid "Lade Details ..."
-msgstr ""
-
-#: jfdetail.py
-msgid "laufend"
-msgstr ""
-
-#: jfdetail.py
-msgid "beendet"
-msgstr ""
-
-#: jfdetail.py
-msgid "Kritiker %s%%"
 msgstr ""
 
 #: jfdetail.py jfepisodes.py
@@ -1153,6 +1169,22 @@ msgid "Jellyfin durchsuchen (Filme, Serien, Episoden, Musik, Personen)"
 msgstr ""
 
 #: jfplayer.py
+msgid "Intro überspringen"
+msgstr ""
+
+#: jfplayer.py
+msgid "Rückblick überspringen"
+msgstr ""
+
+#: jfplayer.py
+msgid "Vorschau überspringen"
+msgstr ""
+
+#: jfplayer.py
+msgid "Werbung überspringen"
+msgstr ""
+
+#: jfplayer.py
 msgid "Nichts abspielbar gefunden"
 msgstr ""
 
@@ -1176,6 +1208,18 @@ msgstr ""
 msgid ""
 "Nächster Titel kann nicht abgespielt werden:\n"
 "%s"
+msgstr ""
+
+#: jfplayer.py
+msgid "Nächste Folge in %d s"
+msgstr ""
+
+#: jfplayer.py
+msgid "Als Nächstes in %d s"
+msgstr ""
+
+#: jfplayer.py
+msgid "EXIT blendet aus"
 msgstr ""
 
 #: jfplayer.py
@@ -1610,6 +1654,22 @@ msgstr ""
 
 #: jfsettings.py
 msgid "Server: %s (Jellyfin %s)"
+msgstr ""
+
+#: jfsettings.py
+msgid "Allgemein"
+msgstr ""
+
+#: jfsettings.py
+msgid "Wiedergabe"
+msgstr ""
+
+#: jfsettings.py
+msgid "Qualität"
+msgstr ""
+
+#: jfsettings.py
+msgid "System"
 msgstr ""
 
 #: jfsettings.py

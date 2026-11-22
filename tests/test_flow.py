@@ -238,7 +238,11 @@ check(acts[:3] == ["resume", "restart", "tracks"] and "cast" not in acts[:5], "d
 check(det["pilltxt0"].getText() == "Fortsetzen" and det["pilltxt0"].instance.fg == 0x101016 and det["pilltxt1"].instance.fg == 0xf2f2f2,
 	"focused pill has dark text on the white pill")
 check("1080p H264" in det["tech"].getText() and "Audio: " in det["tech"].getText(), "tech info: %s" % det["tech"].getText())
-check(det["crumb"].getText().startswith("Film") and "fortsetzen bei 30:00" in det["meta"].getText(), "crumb/meta: %s | %s" % (det["crumb"].getText(), det["meta"].getText()))
+check(det["crumb"].getText().startswith("Film") and det["meta"].getText().startswith("1996") and "\u2605 7,1" in det["meta"].getText()
+	and det["state"].getText().startswith("fortsetzen bei 30:00") and "endet um" in det["state"].getText(),
+	"facts and state lines: %s | %s | %s" % (det["crumb"].getText(), det["meta"].getText(), det["state"].getText()))
+check(det["poster"].visible and det["poster"].instance.pixmap is not None or pump(lambda: det["poster"].instance.pixmap is not None, timeout=5),
+	"poster left of the text")
 names = [p["Name"] for p in det.cast]
 check(names[0] == "Anna Actor" and names[-1] == "Rex Regie" and len(names) == 11, "cast row actors first, director last %s" % names[:3])
 check(det["progress"].visible and det["progress"].value == 30, "resume progress bar")
@@ -419,11 +423,51 @@ check(state.lib.items["e12"]["UserData"]["Played"], "e12 marked played by server
 fire_event(player, enigma.iPlayableService.evStart)
 pump(lambda: [r for r in state.reports if r[0] == "/Sessions/Playing" and r[1]["ItemId"] == "e13"], timeout=5)
 check([r for r in state.reports if r[0] == "/Sessions/Playing" and r[1]["ItemId"] == "e13"], "e13 start reported")
-press(player, "moveNext")
+# intro skip: the overlay offers OK while the intro runs (media segments, or Intro Skipper on old servers)
+pump(lambda: player.segments, timeout=10)
+check(player.segments and player.segments[0][:2] == ("Intro", 60 * 10000000), "segments loaded %s" % player.segments)
+osd = player.osd
+seek = s.nav.current._seek
+seek.pos = 70 * 90000
+pump(lambda: player.osd_kind == "skip", timeout=3)
+check(osd.shown and osd["osd_title"].getText() == "Intro überspringen", "skip intro offered: %r" % osd["osd_title"].getText())
+press(player, "ok")
+check(seek.pos == 150 * 90000 and not osd.shown, "OK skips to the end of the intro")
+pump(timeout=1.5)
+check(not osd.shown, "skipped intro not offered again")
+# credits (Outro): countdown to the next episode, EXIT cancels it, the end then leaves instead of playing on
+run = int(player.current_item()["RunTimeTicks"])
+
+
+def credits_pos(player):
+	"""In the credits (Outro segment) or, without one, in the last 10 s."""
+	outro = [x for x in player.segments if x[0] == "Outro"]
+	return ((outro[0][1] // 10000000 + 10) if outro else (run // 10000000 - 8)) * 90000
+
+
+seek.pos = credits_pos(player)
+pump(lambda: player.osd_kind == "next", timeout=3)
+check(osd.shown and osd["osd_title"].getText() == "Nächste Folge in 10 s" and "S02E01" in osd["osd_sub"].getText(),
+	"countdown %r / %r" % (osd["osd_title"].getText(), osd["osd_sub"].getText()))
+pump(lambda: osd["osd_title"].getText() == "Nächste Folge in 8 s", timeout=4)
+check(osd["osd_title"].getText() == "Nächste Folge in 8 s", "counts down")
+press(player, "ok")
 pump(lambda: player.current_item()["Id"] == "e21", timeout=10)
-check(player.current_item()["Id"] == "e21", "next key -> e21")
-press(player, "leavePlayer")
-check(name(s.top) == "EpisodesScreen", "back to episodes")
+check(player.current_item()["Id"] == "e21" and not osd.shown, "OK in the countdown plays the next episode at once")
+fire_event(player, enigma.iPlayableService.evStart)
+pump(lambda: player.segments, timeout=10)
+seek = s.nav.current._seek
+seek.pos = credits_pos(player)
+pump(lambda: player.osd_kind == "next", timeout=3)
+press(player, "cancel")
+check(not osd.shown and player.countdown_cancelled, "EXIT cancels the countdown")
+pump(timeout=3)
+check(not osd.shown and player.current_item()["Id"] == "e21", "no countdown after cancel")
+player.doEofInternal(True)
+check(name(s.top) == "EpisodesScreen" and not s.dialogs, "end after cancelled countdown -> back to episodes, overlay gone")
+pump(lambda: [r for r in state.reports if r[0] == "/Sessions/Playing/Stopped" and r[1]["ItemId"] == "e21"], timeout=5)
+pump(timeout=0.3)
+state.lib.items["e21"]["UserData"].update({"Played": False, "PlaybackPositionTicks": 0, "PlayedPercentage": 0})  # later checks count it as new
 pump(lambda: eps["list"].list and eps.current() is not None and eps.current()["Id"] == "e12", timeout=10)
 check(eps.current()["Id"] == "e12", "episode focus restored after player")
 press(eps, "menu")
@@ -576,6 +620,14 @@ press(home, "ok")
 st = s.top
 check(name(st) == "SettingsScreen", "settings opened")
 rows = [r[0] for r in st["list"].list]
+check(rows.count("_group") == 4 and st["list"].getSelectedIndex() == 1, "settings in 4 groups, cursor on the first setting")
+press(st, "up")
+check(st["list"].getSelectedIndex() == 1, "group title at the top is not selectable")
+st["list"].moveToIndex(rows.index("_group", 2) - 1)
+press(st, "down")
+check(st["list"].getCurrent()[0] != "_group" and st["list"].getSelectedIndex() == rows.index("_group", 2) + 1, "down jumps over a group title")
+press(st, "up")
+check(st["list"].getSelectedIndex() == rows.index("_group", 2) - 1, "up jumps back over it")
 st["list"].moveToIndex(rows.index("playmode"))
 press(st, "right")
 check(st.vals["playmode"] == "direct", "change setting")
@@ -624,7 +676,15 @@ check(hero.card == 6 and hero.first == 2 and hero["frame"].instance.pos == (int(
 check(hero["hero_title"].getText() == hero.row_items[6]["Name"], "hero follows focus")
 # smooth: moving inside the visible cards only moves the frame; cards seen before are not decoded again
 card_px = (int(round(300 * HEIGHT / 1080.0)), int(round(169 * HEIGHT / 1080.0)))
-cards_decoded = len([d for d in enigma.ePicLoad.decoded if (d[1], d[2]) == card_px])
+row_files = set(hero.images.path_for(image_ref(i, "card"), *card_px) for i in hero.row_items if image_ref(i, "card"))
+
+
+def row_decodes():
+	"""Decodes of this row's cards (prefetch of other rows may still run meanwhile)."""
+	return [d for d in enigma.ePicLoad.decoded if (d[1], d[2]) == card_px and os.path.splitext(d[0])[0] in row_files]
+
+
+cards_decoded = len(row_decodes())
 covers = [hero["ccover%d" % i].instance.pixmap for i in range(5)]
 press(hero, "left")
 check([hero["ccover%d" % i].instance.pixmap for i in range(5)] == covers and hero.first == 2, "frame moves, cards stay")
@@ -633,7 +693,7 @@ for _ in range(5):
 pump(timeout=0.3)
 check(hero.first == 0 and all(hero["ccover%d" % i].visible for i in range(5) if hero.cells.items[i] and image_ref(hero.cells.items[i], "card")),
 	"scrolled back, all cards visible at once")
-check(len([d for d in enigma.ePicLoad.decoded if (d[1], d[2]) == card_px]) == cards_decoded, "no new decoding when scrolling back (cache)")
+check(len(row_decodes()) == cards_decoded, "no new decoding when scrolling back (cache)")
 check(not enigma.JPG_LOADS, "no JPEG decoded on the GUI thread (%d)" % len(enigma.JPG_LOADS))
 check(all(not inst.busy for inst in enigma.ePicLoad.instances), "decoders idle")
 for _ in range(6):
@@ -747,8 +807,8 @@ def switch_language(target):
 	hero.key_settings()
 	st = s.top
 	rows = [r[0] for r in st["list"].list]
-	check(rows[0] == "language", "language is the first setting")
-	st["list"].moveToIndex(0)
+	check(rows[0] == "_group" and rows[1] == "language", "language is the first setting")
+	st["list"].moveToIndex(1)
 	for _i in range(5):
 		if st.vals["language"] == target:
 			break

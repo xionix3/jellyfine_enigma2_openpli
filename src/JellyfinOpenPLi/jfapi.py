@@ -28,7 +28,7 @@ except ImportError:  # pragma: no cover - python 2 fallback
 	from urlparse import urljoin, urlsplit
 
 CLIENT_NAME = "Jellyfin Enigma2"
-CLIENT_VERSION = "1.4.0"
+CLIENT_VERSION = "1.5.0"
 
 SEARCH_TYPES = "Movie,Series,Episode,BoxSet,MusicAlbum,MusicVideo,Video,MusicArtist,Audio"
 LIST_FIELDS = "Overview,Genres,PrimaryImageAspectRatio,ChildCount,DateCreated,DateLastMediaAdded,MediaSourceCount,SeriesPrimaryImage"
@@ -667,6 +667,41 @@ class JellyfinClient(object):
 			self.delete("/Videos/ActiveEncodings", deviceId=self.device_id, playSessionId=play_session_id)
 		except JellyfinError:
 			pass
+
+	# MediaSegmentType as numbers (older JSON serializers)
+	SEGMENT_NAMES = ("Unknown", "Commercial", "Preview", "Recap", "Outro", "Intro")
+
+	def media_segments(self, item_id, item_type=None):
+		"""Skippable parts of a video: [(type, start_ticks, end_ticks)], type Intro/Recap/Preview/Outro/Commercial.
+
+		Jellyfin 10.10+ media segments (filled by e.g. the Intro Skipper plugin); servers without them
+		answer 404 -> the older Intro Skipper endpoint for episodes; nothing found -> []."""
+		if not getattr(self, "segments_unsupported", False):
+			try:
+				res = self.get("/MediaSegments/%s" % item_id) or {}
+				out = []
+				for seg in res.get("Items") or []:
+					kind = seg.get("Type")
+					if isinstance(kind, int):
+						kind = self.SEGMENT_NAMES[kind] if 0 <= kind < len(self.SEGMENT_NAMES) else "Unknown"
+					start, end = int(seg.get("StartTicks") or 0), int(seg.get("EndTicks") or 0)
+					if end > start:
+						out.append((kind, start, end))
+				return sorted(out, key=lambda s: s[1])
+			except JellyfinError as e:
+				if e.status != 404:
+					return []
+				self.segments_unsupported = True
+		if item_type != "Episode":
+			return []
+		try:
+			res = self.get("/Episode/%s/IntroTimestamps/v1" % item_id) or {}
+		except JellyfinError:
+			return []
+		start, end = float(res.get("IntroStart") or 0), float(res.get("IntroEnd") or 0)
+		if not res.get("Valid", True) or end <= start:
+			return []
+		return [("Intro", int(start * 10000000), int(end * 10000000))]
 
 
 def build_device_profile(opts):

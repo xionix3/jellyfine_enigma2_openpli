@@ -319,18 +319,29 @@ CAST_W = 130
 CAST_H = 195
 
 
+# details: poster left, text column right of it (moved to the left edge when there is no poster)
+DETAIL_POSTER = (120, 196, 300, 450)
+DETAIL_COL = 460
+DETAIL_LINES_Y = (196, 246, 290)  # facts, genres, state
+DETAIL_TEXT_Y = 346
+
+
 def detail_skin():
 	new_png, new_w = badge("new")
+	px, py, pw, ph = DETAIL_POSTER
+	col = DETAIL_COL
 	body = [
 		backdrop_layer(),
 		label("crumb", 120, 40, 1300, 36, 24, DIM, extra='noWrap="1"'),
 		clock(),
-		label("title", 120, 84, 1300, 92, 62, TEXT, extra='noWrap="1"'),
-		pixmap_widget("badge", 120, 192, new_w, 28, new_png, z=2),
-		label("meta", 120 + new_w + 12, 184, 1300, 44, 28, "#00d0d0da", extra='noWrap="1"'),
-		label("genres", 120, 230, 1100, 36, 26, DIM, extra='noWrap="1"'),
-		'<widget name="overview" position="120,284" size="1000,420" font="Regular;30" foregroundColor="#00ececf2" backgroundColor="%s" '
-		'transparent="1" zPosition="2" />' % BG,
+		label("title", 120, 84, 1500, 92, 62, TEXT, extra='noWrap="1"'),
+		pixmap_widget("poster", px, py, pw, ph, z=1, blend=False),
+		pixmap_widget("badge", col, DETAIL_LINES_Y[0] + 8, new_w, 28, new_png, z=2),
+		label("meta", col + new_w + 12, DETAIL_LINES_Y[0], 1340, 44, 28, "#00e2e2ea", extra='noWrap="1"'),
+		label("genres", col, DETAIL_LINES_Y[1], 1340, 36, 26, DIM, extra='noWrap="1"'),
+		label("state", col, DETAIL_LINES_Y[2], 1340, 36, 26, ACCENT, extra='noWrap="1"'),
+		'<widget name="overview" position="%d,%d" size="1000,360" font="Regular;30" foregroundColor="#00ececf2" backgroundColor="%s" '
+		'transparent="1" zPosition="2" />' % (col, DETAIL_TEXT_Y, BG),
 		label("tech", 120, 724, 1700, 36, 23, DIM, extra='noWrap="1"'),
 		label("cast_title", 120, 712, 1000, 40, 28, TEXT, extra='noWrap="1"'),
 		label("cast_hint", 120, 900, 1200, 36, 25, DIM, extra='noWrap="1"'),
@@ -384,6 +395,21 @@ def list_skin(name="JellyfinE2Login", with_status=True, item_height=70):
 		body.append(label("status", 360, 880, 1200, 120, 28, ACCENT, valign="top"))
 	body.append(keybar(y=1030, hint=False))
 	return screen(name, "\n".join(body))
+
+
+OSD_X, OSD_Y, OSD_W, OSD_H = 1200, 690, 640, 132
+
+
+def osd_skin():
+	"""Small overlay above the player's infobar: 'Intro überspringen' / 'Nächste Folge in 8 s'."""
+	body = [
+		epixmap("osd_panel.png", 0, 0, OSD_W, OSD_H),
+		label("osd_title", 34, 18, 470, 50, 32, TEXT, extra='zPosition="1" noWrap="1"'),
+		label("osd_sub", 34, 70, 470, 42, 24, DIM, extra='zPosition="1" noWrap="1"'),
+		epixmap("key_ok.png", 524, 40, 92, 52, z=1),
+	]
+	return scale_skin('<screen name="JellyfinE2Osd" position="%d,%d" size="%d,%d" flags="wfNoBorder" backgroundColor="#ff000000" zPosition="10">\n%s\n</screen>'
+		% (OSD_X, OSD_Y, OSD_W, OSD_H, "\n".join(body)))
 
 
 def quickconnect_skin():

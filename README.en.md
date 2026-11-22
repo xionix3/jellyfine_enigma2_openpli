@@ -70,15 +70,17 @@
 - **Glass look**: rounded, translucent panels, frames and buttons (PNG based, so Enigma2 really blends them)
 - **My lists**: your own filter rules, e.g. *new movies of the last 30 days* or *new episodes of the shows I watch*
 - **Poster grid** with sorting, filters (unplayed, played, favourites, in progress, genre, **category**), NEW badge, progress bars and backdrop
-- **Details**: the picture stays visible, the full description is readable; action buttons, audio/subtitle selection, versions, similar titles; the **cast with photos** appears with ▼ (OK lists the person's titles)
+- **Details**: poster on the left, clear info lines (facts with ★ rating, progress), the backdrop stays visible, the full description is readable; action buttons, audio/subtitle selection, versions, similar titles; the **cast with photos** appears with ▼ (OK lists the person's titles)
 - **Search**: only titles that really contain the term – every category is searched on its own and shown as a row (movies, shows, episodes, collections, music, people)
 - **Seasons & episodes**, **music albums**
 - **English, German, Dutch**: follows the menu language of the box or is set by hand (*Settings → Language*)
 - **Auto-update**: checks the GitHub releases on start (at most twice a day), installs the new version on request (checksum verified) and restarts Enigma2
 - **Playback** through the Enigma2 movie player (GStreamer or ServiceApp):
   direct play in original quality (4K/HEVC on UHD boxes) or transcoded by the server (HLS), e.g. for DTS audio or picture-based subtitles
-- Progress and watched state are reported to the server, **next episode plays automatically**
-- HD and Full-HD skins, connection reuse, prefetching, optional image cache on HDD/USB
+- **Skip intro**: while an intro, recap or preview runs, “Skip intro” appears – OK jumps to its end (or automatically). Needs Jellyfin 10.10+ with media segments, e.g. from the *Intro Skipper* plugin; older servers with Intro Skipper work too
+- **Next episode**: during the credits the next episode counts down from 10 – OK plays it at once, EXIT stays with the credits
+- Progress and watched state are reported to the server
+- **Fast**: pictures on screen are loaded before anything else and appear together instead of one by one; HD and Full-HD skins, connection reuse, prefetching, optional image cache on HDD/USB
 
 ## 📦 Installation
 
@@ -146,6 +148,7 @@ Own lists appear as sections at the top of the start screen. Per list you can se
 | HEVC / DTS / TrueHD / VC-1 / VP9 | what the box may play directly (DTS/TrueHD default → AC3) |
 | Player | GStreamer (4097) or – if installed – ServiceApp exteplayer3/gstplayer |
 | Autoplay next episode, resume | behaviour for shows and saved positions |
+| Skip intro/recap | show button (OK) · automatic · off |
 | Start screen | modern (backdrop + rows of cards) or classic (menu left, posters right) |
 | NEW badge, backdrops | look |
 | Own lists on the start screen | top · after "continue watching" · bottom |

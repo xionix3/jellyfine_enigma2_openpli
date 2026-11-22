@@ -270,6 +270,22 @@ class Handler(BaseHTTPRequestHandler):
 		if not self.authed():
 			return self.send_json({"error": "unauthorized"}, 401)
 
+		if path.startswith("/MediaSegments/"):
+			# 10.10+: intro 60-150 s and credits in the last 90 s of every episode; older servers: 404
+			if [int(x) for x in st.version.split(".")[:2]] < [10, 10]:
+				return self.send_json({}, 404)
+			it = lib.items.get(path.split("/")[2]) or {}
+			if it.get("Type") != "Episode":
+				return self.send_json({"Items": [], "TotalRecordCount": 0, "StartIndex": 0})
+			run = it.get("RunTimeTicks") or 0
+			segs = [{"Id": "s1", "ItemId": it["Id"], "Type": "Intro", "StartTicks": 60 * 10000000, "EndTicks": 150 * 10000000},
+				{"Id": "s2", "ItemId": it["Id"], "Type": 4, "StartTicks": run - 90 * 10000000, "EndTicks": run}]
+			return self.send_json({"Items": segs, "TotalRecordCount": 2, "StartIndex": 0})
+		if path.startswith("/Episode/") and path.endswith("/IntroTimestamps/v1"):
+			it = lib.items.get(path.split("/")[2]) or {}
+			if it.get("Type") != "Episode":
+				return self.send_json({}, 404)
+			return self.send_json({"EpisodeId": it["Id"], "Valid": True, "IntroStart": 60.0, "IntroEnd": 150.0, "ShowSkipPromptAt": 55.0, "HideSkipPromptAt": 70.0})
 		if path == "/Users/Me":
 			return self.send_json({"Id": USER_ID, "Name": "demo"})
 		if path == "/Persons":
